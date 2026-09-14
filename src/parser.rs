@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOp, Expr, UnaryOp};
+use crate::ast::{BinaryOp, Expr, Stmt, UnaryOp};
 use crate::token::{Token, TokenKind};
 
 pub struct Parser {
@@ -9,6 +9,103 @@ pub struct Parser {
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Parser { tokens, current: 0 }
+    }
+
+    pub fn parse_program(&mut self) -> Vec<Stmt> {
+        let mut statements = Vec::new();
+        while !self.is_at_end() {
+            statements.push(self.statement());
+        }
+
+        statements
+    }
+
+    fn statement(&mut self) -> Stmt {
+        if self.match_kinds(&[TokenKind::Let]) {
+            return self.let_statement();
+        }
+        if self.match_kinds(&[TokenKind::Print]) {
+            return self.print_statement();
+        }
+        if self.match_kinds(&[TokenKind::If]) {
+            return self.if_statement();
+        }
+        if self.match_kinds(&[TokenKind::While]) {
+            return self.while_statement();
+        }
+        if self.match_kinds(&[TokenKind::LeftBrace]) {
+            return self.block();
+        }
+
+        self.expression_statement()
+    }
+
+    fn let_statement(&mut self) -> Stmt {
+        let token = self.advance().clone();
+        let name = match token.kind {
+            TokenKind::Identifier(name) => name,
+            other => panic!("Expected variable name, found {:?} on line {}", other, token.line),
+        };
+
+        self.consume(TokenKind::Equal, "Expected '=' after variable name");
+        let initializer = self.parse_expression();
+        self.consume(TokenKind::Semicolon, "Expected ';' after variable declaration");
+
+        Stmt::Let { name, initializer }
+    }
+
+    fn print_statement(&mut self) -> Stmt {
+        let expr = self.parse_expression();
+        self.consume(TokenKind::Semicolon, "Expected ';' after value");
+
+        Stmt::Print(expr)
+    }
+
+    fn if_statement(&mut self) -> Stmt {
+        self.consume(TokenKind::LeftParen, "Expected '(' after 'if'");
+        let condition = self.parse_expression();
+        self.consume(TokenKind::RightParen, "Expected ')' after if condition");
+
+        let then_branch = Box::new(self.statement());
+        let else_branch = if self.match_kinds(&[TokenKind::Else]) {
+            Some(Box::new(self.statement()))
+        } else {
+            None
+        };
+
+        Stmt::If {
+            condition,
+            then_branch,
+            else_branch,
+        }
+    }
+
+    fn while_statement(&mut self) -> Stmt {
+        self.consume(TokenKind::LeftParen, "Expected '(' after 'while'");
+        let condition = self.parse_expression();
+        self.consume(TokenKind::RightParen, "Expected ')' after while condition");
+
+        let body = Box::new(self.statement());
+
+        Stmt::While { condition, body }
+    }
+
+    fn block(&mut self) -> Stmt {
+        let mut statements = Vec::new();
+        while !self.check(&TokenKind::RightBrace) && !self.is_at_end() {
+            statements.push(self.statement());
+        }
+
+        self.consume(TokenKind::RightBrace, "Expected '}' after block");
+
+        Stmt::Block(statements)
+    }
+
+    fn expression_statement(&mut self) -> Stmt {
+        let expr = self.parse_expression();
+        self.consume(TokenKind::Semicolon, "Expected ';' after expression");
+
+        Stmt::ExprStmt(expr)
     }
 
     pub fn parse_expression(&mut self) -> Expr {
@@ -139,6 +236,14 @@ impl Parser {
                 panic!("Unexpected token {:?} on line {}", other, token.line);
             }
         }
+    }
+
+    fn consume(&mut self, kind: TokenKind, message: &str) {
+        if !self.check(&kind) {
+            panic!("{} on line {}", message, self.peek().line);
+        }
+
+        self.advance();
     }
 
     fn match_kinds(&mut self, kinds: &[TokenKind]) -> bool {
