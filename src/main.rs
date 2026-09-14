@@ -9,7 +9,7 @@ use lexer::Lexer;
 use parser::Parser;
 
 fn main() {
-    let source = r#"1 +"#;
+    let source = r#"print "Hello, world!";"#;
 
     let lexer = Lexer::new(source);
     let tokens = lexer.scan_tokens();
