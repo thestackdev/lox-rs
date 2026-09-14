@@ -116,6 +116,10 @@ impl Lexer {
 
         if self.peek() == '.' && self.peek_next().is_ascii_digit() {
             self.advance();
+
+            while self.peek().is_ascii_digit() {
+                self.advance();
+            }
         }
 
         let text: String = self.source[self.start..self.current].iter().collect();

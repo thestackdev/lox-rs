@@ -4,6 +4,10 @@ pub enum Expr {
     StringLit(String),
     Bool(bool),
     Variable(String),
+    Assign {
+        name: String,
+        value: Box<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         op: BinaryOp,

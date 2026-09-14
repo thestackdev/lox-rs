@@ -109,7 +109,26 @@ impl Parser {
     }
 
     pub fn parse_expression(&mut self) -> Expr {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Expr {
+        let expr = self.equality();
+
+        if self.match_kinds(&[TokenKind::Equal]) {
+            let line = self.previous().line;
+            let value = self.assignment();
+
+            return match expr {
+                Expr::Variable(name) => Expr::Assign {
+                    name,
+                    value: Box::new(value),
+                },
+                _ => panic!("Invalid assignment target on line {}", line),
+            };
+        }
+
+        expr
     }
 
     fn equality(&mut self) -> Expr {

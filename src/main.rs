@@ -4,17 +4,19 @@ mod lexer;
 mod parser;
 mod token;
 
+use interpreter::Interpreter;
 use lexer::Lexer;
 use parser::Parser;
 
 fn main() {
-    let source = "1 + 2 * 3";
+    let source = r#"1 +"#;
 
     let lexer = Lexer::new(source);
     let tokens = lexer.scan_tokens();
 
     let mut parser = Parser::new(tokens);
-    let expr = parser.parse_expression();
+    let statements = parser.parse_program();
 
-    println!("{:#?}", expr);
+    let mut interpreter = Interpreter::new();
+    interpreter.interpret(&statements);
 }

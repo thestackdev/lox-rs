@@ -59,14 +59,20 @@ impl Interpreter {
                 then_branch,
                 else_branch,
             } => {
-                if self.is_truthy(&self.evaluate(condition)) {
+                let value = self.evaluate(condition);
+                if self.is_truthy(&value) {
                     self.execute(then_branch);
                 } else if let Some(else_branch) = else_branch {
                     self.execute(else_branch);
                 }
             }
             Stmt::While { condition, body } => {
-                while self.is_truthy(&self.evaluate(condition)) {
+                loop {
+                    let value = self.evaluate(condition);
+                    if !self.is_truthy(&value) {
+                        break;
+                    }
+
                     self.execute(body);
                 }
             }
@@ -76,12 +82,17 @@ impl Interpreter {
         }
     }
 
-    fn evaluate(&self, expr: &Expr) -> Value {
+    fn evaluate(&mut self, expr: &Expr) -> Value {
         match expr {
             Expr::Number(n) => Value::Number(*n),
             Expr::StringLit(s) => Value::StringLit(s.clone()),
             Expr::Bool(b) => Value::Bool(*b),
             Expr::Variable(name) => self.lookup(name),
+            Expr::Assign { name, value } => {
+                let value = self.evaluate(value);
+                self.assign(name, value.clone());
+                value
+            }
             Expr::Unary { op, expr } => {
                 let value = self.evaluate(expr);
                 match op {
@@ -125,6 +136,17 @@ impl Interpreter {
 
     fn is_truthy(&self, value: &Value) -> bool {
         !matches!(value, Value::Bool(false))
+    }
+
+    fn assign(&mut self, name: &str, value: Value) {
+        for scope in self.scopes.iter_mut().rev() {
+            if scope.contains_key(name) {
+                scope.insert(name.to_string(), value);
+                return;
+            }
+        }
+
+        panic!("Undefined variable '{}'", name);
     }
 
     fn define(&mut self, name: String, value: Value) {
