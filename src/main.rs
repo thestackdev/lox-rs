@@ -1,25 +1,20 @@
 mod ast;
+mod interpreter;
 mod lexer;
+mod parser;
 mod token;
 
 use lexer::Lexer;
+use parser::Parser;
 
 fn main() {
-    let source = r#"
-    let x = 10;
-    let y = "hello world";
-
-    if (x < 20) {
-        print y;
-    } else {
-        print x;
-    }
-    "#;
+    let source = "1 + 2 * 3";
 
     let lexer = Lexer::new(source);
     let tokens = lexer.scan_tokens();
 
-    for token in &tokens {
-        println!("{:?}", token);
-    }
+    let mut parser = Parser::new(tokens);
+    let expr = parser.parse_expression();
+
+    println!("{:#?}", expr);
 }
