@@ -35,6 +35,7 @@ pub enum UnaryOp {
     Not,
 }
 
+#[derive(Debug, Clone)]
 pub enum Stmt {
     Let {
         name: String,
